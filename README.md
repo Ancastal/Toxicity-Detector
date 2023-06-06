@@ -1,4 +1,3 @@
-
 # Fake News and Toxicity Detection
 
 With the rise of fake news and biased reporting, it's more important than 
