@@ -1,7 +1,7 @@
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
 from datasets import load_dataset
-from preprocess import preprocess_text
+from fakenews.preprocess import preprocess_text
 import pickle
 from google.cloud import storage
 from datetime import datetime
