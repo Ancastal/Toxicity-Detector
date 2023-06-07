@@ -4,7 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from sklearn.feature_extraction.text import TfidfVectorizer
-from toxicity_classifier.models.model import initialize_model
+from fakenews.model import initialize_model
+from fakenews.preprocess import preprocess_text
 
 app = FastAPI()
 
