@@ -12,7 +12,7 @@ if os.path.isfile('requirements_dev.txt'):
     requirements.extend([x.strip() for x in content if 'git+' not in x])
 
 
-setup(name='toxicity_classifier',
+setup(name='fakenews',
       version="0.0.2",
       description="A classification model for detecting toxicity in text.",
       packages=find_packages(),
