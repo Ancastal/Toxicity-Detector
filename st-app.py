@@ -34,7 +34,7 @@ button = st.button("Predict")
 if button:
     if sentence:
         st.write(f"🔄 Predicting...")
-        response = requests.get(f"http://127.0.0.1:8000/predict?sentence={sentence}&model={model}")
+        response = requests.get(f"https://toxicity-classifier-cwkm3of3qa-ew.a.run.app/predict?sentence={sentence}&model={model}")
         toxic = response.json()
 
         # Display prediction
