@@ -1,99 +1,84 @@
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
 from datasets import load_dataset
+from sklearn.feature_extraction.text import TfidfVectorizer
 from fakenews.preprocess import preprocess_text
 import pickle
 from google.cloud import storage
 from datetime import datetime
 from fakenews.params import *
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
+from sklearn.svm import LinearSVC
+from sklearn.neighbors import KNeighborsClassifier
+from lightgbm import LGBMClassifier
+from xgboost import XGBClassifier
+from catboost import CatBoostClassifier
+from sklearn.neural_network import MLPClassifier
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def list_bucket_files(bucket_name="toxicity-classifier"):
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blobs = bucket.list_blobs()
+    return [blob.name for blob in blobs if blob.name.startswith("toxicity-")]
 
+def save_to_bucket(model_name, bucket_name="toxicity-classifier"):
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(model_name)
+    blob.upload_from_filename(model_name)
 
-def initialize_model(vectorizer: object) -> tuple:
-    """
-    Initialize a text classification model.
+model_dict = {
+    "logistic_regression": LogisticRegression,
+    "decision_tree": DecisionTreeClassifier,
+    "random_forest": RandomForestClassifier,
+    "naive_bayes": MultinomialNB,
+    "svm": LinearSVC,
+    "knn": KNeighborsClassifier,
+    "gradient_boosting": GradientBoostingClassifier,
+    "lightgbm": LGBMClassifier,
+    "xgboost": XGBClassifier,
+    "catboost": CatBoostClassifier,
+    "mlp": MLPClassifier,
+    "ada_boost": AdaBoostClassifier,
+    # add more models here as needed
+}
 
-    Args:
-        vectorizer (object): A feature extraction vectorizer.
+def load_model(model: str) -> tuple:
+    logging.info("🛜 Loading model...")
+    blobs = list_bucket_files()
 
-    Returns:
-        tuple: A tuple containing the initialized vectorizer and the initialized classification model.
-    """
-    # If model already exists, load it
-    model = None
-    try:
-        model = load_model()
-        if model is not None:
-            logging.info("Loaded model from local...")
-            return vectorizer, model
-    except:
-        pass
+    model_name = "toxicity-" + str(model) + ".pkl"
 
+    if model_name in blobs:
+        logging.info("🛜 Model found in bucket.")
+        client = storage.Client()
+        bucket = client.bucket("toxicity-classifier")
+        blob = bucket.blob(model_name)
+        blob.download_to_filename(model_name)
+        loaded_vectorizer, loaded_model = pickle.load(open(model_name, "rb"))
+        return loaded_vectorizer, loaded_model
 
-    logging.info("Downloading dataset from huggingface...")
-    dataset = load_dataset("mediabiasgroup/mbib-base", "hate-speech")
+    dataset = load_dataset("mediabiasgroup/mbib-base", "political-bias", keep_in_memory=True)
     df = dataset['train'].to_pandas()
-
-    logging.info("Preprocessing dataset...")
-    df = df.sample(frac=DATA_SIZE).reset_index(drop=True)
-
     df['text'] = df['text'].apply(preprocess_text)
-
-    X_train = vectorizer.fit_transform(df['text'])
+    vectorizer = TfidfVectorizer().fit(df['text'])
+    X_train = vectorizer.transform(df['text'])
     y_train = df['label']
 
-    model = LogisticRegression(max_iter=5000)
-    logging.info("Training model...")
-    model.fit(X_train, y_train)
+    model_converted = model_dict.get(model)()
+    model_converted.fit(X_train, y_train)
 
-    # Save model
-    save_model(model)
+    save_model(vectorizer, model_converted, model_name)
+    return vectorizer, model_converted
 
-    return vectorizer, model
-
-
-def save_model(model: object, local=False) -> None:
-    """
-    Save a model to storage.
-
-    Args:
-        model (object): The model to save.
-        local (bool): Whether to save the model locally or to the cloud.
-    Returns:
-        None
-    """
-    if MODEL_TARGET == 'local' or local:
-        logging.info(f"Saved model to locally.")
-        pickle.dump(model, open(MODEL_PATH, 'wb'))
-    else:
-        storage_client = storage.Client.from_service_account_json(CRED_PATH)
-        logging.info(f"Saving local model and uploading on the cloud.")
-        pickle.dump(model, open(MODEL_PATH, 'wb'))
-        bucket = storage_client.bucket('toxicity-classifier')
-        blob = bucket.blob(MODEL_PATH)
-        blob.upload_from_filename(MODEL_PATH)
-        logging.info(f"Saved model on the cloud.")
-
-
-def load_model() -> object:
-    """
-    Load a model from storage.
-
-    Returns:
-        object: The loaded model.
-    """
-    if MODEL_TARGET == 'local':
-        with open(MODEL_PATH, 'rb') as f:
-                model = pickle.load(f)
-    else:
-        storage_client = storage.Client()
-        bucket = storage_client.bucket('toxicity-classifier')
-        blob = bucket.blob(MODEL_NAME)
-        logging.info(f"Loading model from {MODEL_NAME}")
-        blob.download_to_filename(MODEL_NAME)
-        model = pickle.load(open(MODEL_NAME, 'rb'))
-        logging.info(f"Loaded model from the cloud.")
-    return model
+def save_model(vectorizer: object, model_converted: object, model_name: str, local=False) -> None:
+    logging.info(f"Uploading on the cloud.")
+    pickle.dump((vectorizer, model_converted), open(model_name, "wb"))  # pickle the actual model object
+    save_to_bucket(model_name)
+    logging.info(f"Saved model on the cloud.")
+    logging.info(f"Saved model to locally.")
