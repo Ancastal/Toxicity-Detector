@@ -19,7 +19,9 @@ model_list = [
 ]
 
 st.title("🤖 Toxicity Classifier")
-st.write("Please select a model and enter a sentence for toxicity classification.")
+st.divider()
+st.image("https://nohatespeech.network/wp-content/uploads/2020/10/cropped-No-Hate-Speech-Logo-Transperent-1-1.png", width=600)
+st.write("Please select a model and enter a sentence for **toxicity classification**.")
 
 # Select a model
 model = st.selectbox("🔍 Select a model:", model_list)
