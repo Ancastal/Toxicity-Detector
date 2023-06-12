@@ -4,25 +4,41 @@ from google.cloud import storage
 
 st.set_page_config(page_title="Toxicity Classifier", page_icon="🤖")
 
-def list_bucket_files(bucket_name="toxicity-classifier"):
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-    blobs = bucket.list_blobs()
-    return [blob.name for blob in blobs if blob.name.startswith("model-")]
+model_list = [
+    "logistic_regression",
+    "decision_tree",
+    "random_forest",
+    "naive_bayes",
+    "svm",
+    "knn",
+    "gradient_boosting",
+    "lightgbm",
+    "xgboost",
+    "catboost",
+    "mlp",
+    "ada_boost",
+]
 
-st.title("Toxicity Classifier")
+st.title("🤖 Toxicity Classifier")
+st.write("Please select a model and enter a sentence for toxicity classification.")
+
 # Select a model
-st.subheader("Select a model")
-files = list_bucket_files() + ["local"]
-bucket = st.selectbox("Select a model:", files)
-if bucket:
-    st.write(f"Selected model: {bucket}")
-sentence = st.text_input("Enter a sentence:")
+model = st.selectbox("🔍 Select a model:", model_list)
+
+# Sentence input
+sentence = st.text_input("📝 Enter a sentence:")
+
+# Predict button
 button = st.button("Predict")
+
 if button:
-    st.write("You entered:", sentence)
-    st.write("Predicting...")
-    response = requests.get(f"http://127.0.0.1:8000/predict?sentence={sentence}&model={bucket}")
-    toxic = response.json()["bias"]
-    st.write(f"Prediction: {toxic}")
-    st.write(f"Probabilities: {response.json()['probabilities']}")
+    if sentence:
+        st.write(f"🔄 Predicting...")
+        response = requests.get(f"http://127.0.0.1:8000/predict?sentence={sentence}&model={model}")
+        toxic = response.json()
+
+        # Display prediction
+        st.markdown(f"**🔮 Prediction:** `{'Toxic' if toxic['y_pred'] == 1 else 'Unbiased'}`")
+        st.markdown(f"**📊 Probabilities:** `{toxic['y_proba']}`")
+    else:
+        st.write("⚠️ Please enter a sentence.")
