@@ -12,7 +12,6 @@ model_list = [
     "svm",
     "knn",
     "gradient_boosting",
-    "lightgbm",
     "xgboost",
     "catboost",
     "mlp",
