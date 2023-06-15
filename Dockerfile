@@ -6,5 +6,5 @@ COPY requirements.txt /requirements.txt
 COPY .env /.env
 
 RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+RUN pip install -r /requirements.txt
 CMD uvicorn fakenews.api.fast:app --host 0.0.0.0 --port $PORT

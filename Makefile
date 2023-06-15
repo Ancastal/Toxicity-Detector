@@ -94,5 +94,5 @@ docker_deploy:
 		--image $(GCR_MULTI_REGION)/$(GCP_PROJECT)/$(DOCKER_IMAGE_NAME):prod \
 		--platform managed \
 		--region europe-west1 \
-		--memory ${GCR_MEMORY} \
+		--memory 2.5Gi \
 		--env-vars-file .env.yaml
