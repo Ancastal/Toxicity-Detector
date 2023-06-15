@@ -1,4 +1,4 @@
-FROM python:3.10.6-slim
+FROM python:3.10.6-buster
 
 COPY fakenews /fakenews
 COPY credentials.json /credentials.json

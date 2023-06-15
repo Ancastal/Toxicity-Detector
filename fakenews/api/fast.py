@@ -1,19 +1,21 @@
 import logging
-from simpletransformers.classification import ClassificationModel
+# from simpletransformers.classification import ClassificationModel
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sklearn.feature_extraction.text import TfidfVectorizer
+# from sklearn.feature_extraction.text import TfidfVectorizer
 from fakenews.model import load_models
 from fakenews.preprocess import preprocess_text
-from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
+# from fastapi.responses import JSONResponse
+# from fastapi.encoders import jsonable_encoder
 import os
 
 app = FastAPI()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 logging.info("Setting up application...")
-app.state.model = None
+
+app.state.model = load_models()
+logging.info("✅ Model loaded.")
 
 app.add_middleware(
     CORSMiddleware,
@@ -54,21 +56,14 @@ def predict(
     """
     logging.info("🧑‍💻 Making prediction...")
 
-    X_preprocessed = preprocess_text(sentence)
-    roberta = load_models()
-
-    logging.info("✅ Model loaded.")
-
-    y_pred = roberta.predict([sentence])[0]
-
-    print(y_pred)
+    # import ipdb; ipdb.set_trace()
+    # X_preprocessed = preprocess_text(sentence)
+    y_pred = app.state.model.predict([sentence])
+    y_pred = y_pred[0]
 
     logging.info("✅ Prediction made.")
 
     return y_pred[0]
-
-    #json_compatible_item_data = jsonable_encoder(y_pred)
-    #eturn JSONResponse(content=json_compatible_item_data)
 
 
 @app.get("/")

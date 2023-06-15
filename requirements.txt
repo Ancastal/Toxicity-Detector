@@ -1,7 +1,4 @@
 scikit-learn
-xgboost
-catboost
-datasets
 google-cloud-storage
 nltk
 uvicorn

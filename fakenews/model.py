@@ -1,20 +1,20 @@
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.linear_model import LogisticRegression
-from datasets import load_dataset
-from sklearn.feature_extraction.text import TfidfVectorizer
-from fakenews.preprocess import preprocess_text
+# from sklearn.naive_bayes import MultinomialNB
+# from sklearn.linear_model import LogisticRegression
+# from datasets import load_dataset
+# from sklearn.feature_extraction.text import TfidfVectorizer
+# from fakenews.preprocess import preprocess_text
 import pickle
 from google.cloud import storage
 from datetime import datetime
 from fakenews.params import *
 from simpletransformers.classification import ClassificationModel
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
-from sklearn.svm import LinearSVC
-from sklearn.neighbors import KNeighborsClassifier
-from xgboost import XGBClassifier
-from catboost import CatBoostClassifier
-from sklearn.neural_network import MLPClassifier
+# from sklearn.tree import DecisionTreeClassifier
+# from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
+# from sklearn.svm import LinearSVC
+# from sklearn.neighbors import KNeighborsClassifier
+# from xgboost import XGBClassifier
+# from catboost import CatBoostClassifier
+# from sklearn.neural_network import MLPClassifier
 import logging
 import os
 
