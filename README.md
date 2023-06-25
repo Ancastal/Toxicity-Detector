@@ -76,5 +76,3 @@ work has made this project possible.
 
 For questions or inquiries, please contact 
 [Ancastal](mailto:ancastal@outlook.it).
-```
-
