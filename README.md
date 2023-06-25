@@ -1,6 +1,3 @@
-Certainly! Here's an example of a README file for your project repository:
-
-```
 # Toxicity Detector
 
 The Toxicity Detector is an AI-powered solution for detecting and 
