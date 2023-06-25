@@ -1,94 +1,92 @@
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.linear_model import LogisticRegression
-from datasets import load_dataset
-from fakenews.preprocess import preprocess_text
+# from sklearn.naive_bayes import MultinomialNB
+# from sklearn.linear_model import LogisticRegression
+# from datasets import load_dataset
+# from sklearn.feature_extraction.text import TfidfVectorizer
+# from fakenews.preprocess import preprocess_text
 import pickle
 from google.cloud import storage
 from datetime import datetime
 from fakenews.params import *
+from simpletransformers.classification import ClassificationModel
+# from sklearn.tree import DecisionTreeClassifier
+# from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
+# from sklearn.svm import LinearSVC
+# from sklearn.neighbors import KNeighborsClassifier
+# from xgboost import XGBClassifier
+# from catboost import CatBoostClassifier
+# from sklearn.neural_network import MLPClassifier
+import logging
+import os
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def initialize_model(vectorizer: object) -> tuple:
-    """
-    Initialize a text classification model.
+def list_bucket_files(bucket_name="toxicity-classifier"):
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blobs = bucket.list_blobs()
+    return [blob.name for blob in blobs]
 
-    Args:
-        vectorizer (object): A feature extraction vectorizer.
+def save_to_bucket(model_name, bucket_name="toxicity-classifier"):
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(model_name)
+    blob.upload_from_filename(model_name)
 
-    Returns:
-        tuple: A tuple containing the initialized vectorizer and the initialized classification model.
-    """
-    # If model already exists, load it
-    model = load_model(MODEL_NAME)
-    if model:
-        print("Loaded model from storage.")
-        return vectorizer, model
-
-    # Otherwise, train a new model
-
-    # Load dataset
-    try:
-        df = pickle.load(open('raw_data/data.pkl', 'rb'))
-    except FileNotFoundError:
-        print("Downloading dataset...")
-        dataset = load_dataset("mediabiasgroup/mbib-base", "hate-speech")
-        df = dataset['train'].to_pandas()
-        pickle.dump(df, open('raw_data/data.pkl', 'wb'))
-        print("Done.")
-
-    # Preprocess text
-    df = df.sample(frac=DATA_SIZE).reset_index(drop=True)
-
-    df['text'] = df['text'].apply(preprocess_text)
-
-    X_train = vectorizer.fit_transform(df['text'])
-    y_train = df['label']
-
-    model = LogisticRegression()
-    model.fit(X_train, y_train)
-
-    # Save model
-    save_model(model, 'raw_data/model.pkl')
-
-    return vectorizer, model
-
-
-def save_model(model: object, filename: str) -> None:
-    """
-    Save a model to storage.
-
-    Args:
-        model (object): The model to save.
-        filename (str): The name of the file to save the model to.
-
-    Returns:
-        None
-    """
-    if MODEL_TARGET == 'local':
-        pickle.dump(model, open(filename, 'wb'))
-    else:
-        storage_client = storage.Client()
-        bucket = storage_client.bucket('toxicity-classifier')
-        blob = bucket.blob(filename)
-        blob.upload_from_filename(filename)
-
-
-def load_model(filename: str) -> object:
-    """
-    Load a model from storage.
-
-    Args:
-        filename (str): The name of the file to load the model from.
-
-    Returns:
-        object: The loaded model.
-    """
-    if MODEL_TARGET == 'local':
-        model = pickle.load(open(filename, 'rb'))
-    else:
-        storage_client = storage.Client()
-        bucket = storage_client.bucket('toxicity-classifier')
-        blob = bucket.blob(filename)
-        blob.download_to_filename(filename)
-        model = pickle.load(open(filename, 'rb'))
+def load_classification_model(model, model_path):
+    model = ClassificationModel(model, model_path, use_cuda=False, num_labels=6, args={'overwrite_output_dir': True, 'output_dir': 'outputs/distilbert'})
     return model
+
+def load_models() -> None:
+    logging.info("🛜 Loading dataset...")
+    blobs = list_bucket_files()
+    parent_dir = os.path.dirname(os.path.abspath(__file__))
+    roberta_dir = os.path.join(parent_dir, "models", "roberta")
+
+    try:
+        loaded_model = load_classification_model("roberta", roberta_dir)
+        return loaded_model
+    except FileNotFoundError:
+        loaded_model = None
+        logging.info("🛜 Model not found locally.")
+    except Exception as e:
+        loaded_model = None
+        logging.info(e)
+
+    if loaded_model is None:
+        logging.info("🛜 Model not found locally. Downloading from bucket...")
+        logging.info(f"🛜 Downloading models from bucket...")
+
+        os.makedirs(roberta_dir, exist_ok=True)
+
+        for model_name in blobs:
+            if model_name in blobs:
+                logging.info(f"🛜 Model {model_name} found in bucket.")
+                client = storage.Client()
+                bucket = client.bucket("toxicity-classifier")
+                blob = bucket.blob(model_name)
+
+                blob.download_to_filename(os.path.join(roberta_dir, model_name))
+                if model_name.endswith(".bin"):
+                    logging.info(f"🛜 Model {model_name} downloaded from bucket.")
+            else:
+                logging.warning(f"🛜 Model {model_name} not found in bucket.")
+
+        logging.info("🛜 Loading models...")
+
+        assert os.path.exists(os.path.join(roberta_dir, "pytorch_model.bin"))
+
+        loaded_model = load_classification_model("roberta", roberta_dir)
+
+        assert loaded_model is not None
+
+        logging.info("🛜 Models loaded.")
+
+    return loaded_model
+
+
+def save_model(vectorizer: object, model_converted: object, model_name: str, local=False) -> None:
+    logging.info(f"Uploading on the cloud.")
+    pickle.dump((vectorizer, model_converted), open(model_name, "wb"))  # pickle the actual model object
+    save_to_bucket(model_name)
+    logging.info(f"Saved model on the cloud.")
+    logging.info(f"Saved model to locally.")
