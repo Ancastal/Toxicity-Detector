@@ -1,4 +1,5 @@
 # Standard python ignores
+*.ipynb
 *.egg-info
 .coverage
 .ipynb_checkpoints
