@@ -3,18 +3,24 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 # from sklearn.feature_extraction.text import TfidfVectorizer
-from fakenews.model import load_models
-from fakenews.preprocess import preprocess_text
+# from fakenews.model import load_models
 # from fastapi.responses import JSONResponse
 # from fastapi.encoders import jsonable_encoder
 import os
+import torch
+
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+
 
 app = FastAPI()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 logging.info("Setting up application...")
 
-app.state.model = load_models()
+app.state.tokenizer = AutoTokenizer.from_pretrained("Ancastal/bert-bias-detector")
+app.state.model = AutoModelForSequenceClassification.from_pretrained("Ancastal/bert-bias-detector")
+
+# app.state.model = load_models()
 logging.info("✅ Model loaded.")
 
 app.add_middleware(
@@ -56,14 +62,16 @@ def predict(
     """
     logging.info("🧑‍💻 Making prediction...")
 
-    # import ipdb; ipdb.set_trace()
-    # X_preprocessed = preprocess_text(sentence)
-    y_pred = app.state.model.predict([sentence])
-    y_pred = y_pred[0]
+    inputs = app.state.tokenizer(sentence, return_tensors="pt")
+
+    with torch.no_grad():
+        logits = app.state.model(**inputs).logits
+
+    y_pred = logits.argmax().item()
 
     logging.info("✅ Prediction made.")
 
-    return y_pred[0]
+    return y_pred
 
 
 @app.get("/")

@@ -1,6 +1,4 @@
-scikit-learn
 google-cloud-storage
-nltk
 uvicorn
 fastapi
 simpletransformers
